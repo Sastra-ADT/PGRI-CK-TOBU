@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Manajemen Keanggotaan PGRI Tobu</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #printable-kta, #printable-kta * { visibility: visible; }
+            #printable-kta { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans antialiased">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // SVG Icons Component Helper
+        const Icon = ({ name, className = "w-5 h-5" }) => {
+            const icons = {
+                users: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />,
+                userPlus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />,
+                card: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />,
+                money: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
+                dashboard: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />,
+                exportImport: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />,
+                search: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />,
+                download: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />,
+                upload: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />,
+                print: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />,
+                check: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />,
+                trash: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />,
+                school: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />,
+                refresh: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            };
+            return (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {icons[name] || null}
+                </svg>
+            );
+        };
+
+        const INITIAL_MEMBERS = [
+            {
+                id: '1',
+                npa: '24021100001',
+                nik: '5302111508820001',
+                nama: 'Yosep Kase, S.Pd.',
+                sekolah: 'SMA Negeri Tobu',
+                desa: 'Tobu',
+                statusPegawai: 'PNS',
+                mataPelajaran: 'Bahasa Indonesia',
+                noWa: '081234567890',
+                statusKta: 'Aktif',
+                statusIuran: 'Lunas (Bulan Ini)',
+                tanggalDaftar: '2024-01-15'
+            },
+            {
+                id: '2',
+                npa: '24021100002',
+                nik: '5302112003850002',
+                nama: 'Maria Nabunome, S.Pd.K.',
+                sekolah: 'SMK Kristen Huetalan',
+                desa: 'Huetalan',
+                statusPegawai: 'PPPK Penuh Waktu',
+                mataPelajaran: 'Pendidikan Agama Kristen',
+                noWa: '082145678901',
+                statusKta: 'Aktif',
+                statusIuran: 'Lunas (Bulan Ini)',
+                tanggalDaftar: '2024-02-10'
+            },
+            {
+                id: '3',
+                npa: '24021100003',
+                nik: '5302111011920003',
+                nama: 'Petrus Banamtuan, S.T.',
+                sekolah: 'SMK Kristen Huetalan',
+                desa: 'Huetalan',
+                statusPegawai: 'PPPK Paruh Waktu',
+                mataPelajaran: 'Teknik Komputer & Jaringan',
+                noWa: '085239123456',
+                statusKta: 'Proses Verifikasi',
+                statusIuran: 'Tunggakan < 3 Bulan',
+                tanggalDaftar: '2024-03-01'
+            },
+            {
+                id: '4',
+                npa: '24021100004',
+                nik: '5302110505950004',
+                nama: 'Ester Saefatu, A.Md.',
+                sekolah: 'SMA Negeri Usapimnasi',
+                desa: 'Tutem',
+                statusPegawai: 'Guru Honorer Sekolah',
+                mataPelajaran: 'Matematika',
+                noWa: '081339876543',
+                statusKta: 'Belum Terbit',
+                statusIuran: 'Lunas (Bulan Ini)',
+                tanggalDaftar: '2024-03-20'
+            }
+        ];
+
+        const SCHOOLS = ['SMA Negeri Tobu', 'SMK Kristen Huetalan', 'SMA Negeri Usapimnasi'];
+        const VILLAGES = ['Tobu', 'Huetalan', 'Tutem', 'Tune', 'Bonneu', 'Saenam', 'Pobas', 'Kutotes'];
+        const PEGAWAI_TYPES = ['PNS', 'PPPK Penuh Waktu', 'PPPK Paruh Waktu', 'Guru Honorer Daerah (Honda)', 'Guru Honorer Sekolah', 'Guru Swasta'];
+
+        function App() {
+            const [members, setMembers] = useState(() => {
+                const saved = localStorage.getItem('pgri_tobu_members_v2');
+                return saved ? JSON.parse(saved) : INITIAL_MEMBERS;
+            });
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [selectedMemberForKta, setSelectedMemberForKta] = useState(null);
+
+            // Filter States
+            const [searchTerm, setSearchTerm] = useState('');
+            const [filterSchool, setFilterSchool] = useState('');
+            const [filterStatus, setFilterStatus] = useState('');
+            const [filterKta, setFilterKta] = useState('');
+
+            // Form State
+            const [formData, setFormData] = useState({
+                nama: '', nik: '', sekolah: SCHOOLS[0], desa: VILLAGES[0],
+                statusPegawai: 'PPPK Paruh Waktu', mataPelajaran: '', noWa: ''
+            });
+            const [formMsg, setFormMsg] = useState({ type: '', text: '' });
+
+            useEffect(() => {
+                localStorage.setItem('pgri_tobu_members_v2', JSON.stringify(members));
+            }, [members]);
+
+            const stats = useMemo(() => {
+                const total = members.length;
+                const pns = members.filter(m => m.statusPegawai === 'PNS').length;
+                const pppkPenuh = members.filter(m => m.statusPegawai === 'PPPK Penuh Waktu').length;
+                const pppkParuh = members.filter(m => m.statusPegawai === 'PPPK Paruh Waktu').length;
+                const honorer = members.filter(m => m.statusPegawai.includes('Honorer') || m.statusPegawai.includes('Swasta')).length;
+                const ktaAktif = members.filter(m => m.statusKta === 'Aktif').length;
+                const iuranLunas = members.filter(m => m.statusIuran === 'Lunas (Bulan Ini)').length;
+
+                return { total, pns, pppkPenuh, pppkParuh, honorer, ktaAktif, iuranLunas };
+            }, [members]);
+
+            const filteredMembers = useMemo(() => {
+                return members.filter(m => {
+                    const matchSearch = m.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        m.nik.includes(searchTerm) || (m.npa && m.npa.includes(searchTerm));
+                    const matchSchool = !filterSchool || m.sekolah === filterSchool;
+                    const matchStatus = !filterStatus || m.statusPegawai === filterStatus;
+                    const matchKta = !filterKta || m.statusKta === filterKta;
+                    return matchSearch && matchSchool && matchStatus && matchKta;
+                });
+            }, [members, searchTerm, filterSchool, filterStatus, filterKta]);
+
+            const handleAddMember = (e) => {
+                e.preventDefault();
+                if (formData.nik.length !== 16) {
+                    setFormMsg({ type: 'error', text: 'NIK harus berjumlah 16 digit angka!' });
+                    return;
+                }
+                const newMember = {
+                    id: Date.now().toString(),
+                    npa: `240211${String(members.length + 1).padStart(5, '0')}`,
+                    ...formData,
+                    statusKta: 'Proses Verifikasi',
+                    statusIuran: 'Lunas (Bulan Ini)',
+                    tanggalDaftar: new Date().toISOString().split('T')[0]
+                };
+                setMembers([newMember, ...members]);
+                setFormMsg({ type: 'success', text: `Anggota ${formData.nama} berhasil didaftarkan!` });
+                setFormData({ nama: '', nik: '', sekolah: SCHOOLS[0], desa: VILLAGES[0], statusPegawai: 'PPPK Paruh Waktu', mataPelajaran: '', noWa: '' });
+                setTimeout(() => setFormMsg({ type: '', text: '' }), 4000);
+            };
+
+            const handleDeleteMember = (id) => {
+                if (confirm('Apakah Anda yakin ingin menghapus data anggota ini?')) {
+                    setMembers(members.filter(m => m.id !== id));
+                }
+            };
+
+            const handleUpdateIuran = (id, newStatus) => {
+                setMembers(members.map(m => m.id === id ? { ...m, statusIuran: newStatus } : m));
+            };
+
+            const handleExportJson = () => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(members, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `Data_PGRI_Cabang_Tobu_${new Date().toISOString().split('T')[0]}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+            };
+
+            const handleImportJson = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (Array.isArray(imported)) {
+                            setMembers(imported);
+                            alert('Data keanggotaan berhasil diperbarui dari file JSON!');
+                        } else {
+                            alert('Format file JSON tidak valid!');
+                        }
+                    } catch (err) {
+                        alert('Gagal membaca file JSON!');
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const handleResetData = () => {
+                if (confirm('Kembalikan ke data contoh awal? Seluruh perubahan lokal akan ditimpa.')) {
+                    setMembers(INITIAL_MEMBERS);
+                    localStorage.removeItem('pgri_tobu_members_v2');
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {/* Header */}
+                    <header className="bg-gradient-to-r from-red-800 via-red-700 to-red-900 text-white shadow-md no-print">
+                        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-white text-red-800 p-2.5 rounded-full font-bold text-xl shadow">PGRI</div>
+                                <div>
+                                    <h1 className="text-xl font-bold tracking-tight">PGRI CABANG KHUSUS TOBU</h1>
+                                    <p className="text-xs text-red-100">Kecamatan Tobu, Kab. Timor Tengah Selatan, NTT</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 bg-red-900/50 px-3 py-1.5 rounded-lg text-xs border border-red-500/30">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span>Sistem Manajemen Keanggotaan Active</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Navigation Bar */}
+                    <nav className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-30 no-print">
+                        <div className="max-w-7xl mx-auto px-4 flex overflow-x-auto space-x-1 sm:space-x-2 py-2">
+                            {[
+                                { id: 'dashboard', label: 'Dashboard Overview', icon: 'dashboard' },
+                                { id: 'data', label: 'Data Anggota', icon: 'users' },
+                                { id: 'register', label: 'Pendaftaran Anggota', icon: 'userPlus' },
+                                { id: 'kta', label: 'Cetak KTA Digital', icon: 'card' },
+                                { id: 'iuran', label: 'Kelola Iuran', icon: 'money' },
+                                { id: 'export', label: 'Ekspor/Impor', icon: 'exportImport' },
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${
+                                        activeTab === tab.id
+                                            ? 'bg-red-700 text-white shadow-sm'
+                                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                    }`}
+                                >
+                                    <Icon name={tab.icon} className="w-4 h-4" />
+                                    <span>{tab.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </nav>
+
+                    {/* Main Content */}
+                    <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+                        {/* TAB 1: DASHBOARD */}
+                        {activeTab === 'dashboard' && (
+                            <div className="space-y-6">
+                                {/* Stats Grid */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                                    {[
+                                        { title: 'Total Guru', val: stats.total, color: 'bg-blue-600', icon: 'users' },
+                                        { title: 'PNS', val: stats.pns, color: 'bg-emerald-600', icon: 'school' },
+                                        { title: 'PPPK Penuh', val: stats.pppkPenuh, color: 'bg-teal-600', icon: 'school' },
+                                        { title: 'PPPK Paruh', val: stats.pppkParuh, color: 'bg-purple-600', icon: 'school' },
+                                        { title: 'Guru Honorer', val: stats.honorer, color: 'bg-amber-600', icon: 'school' },
+                                        { title: 'KTA Aktif', val: stats.ktaAktif, color: 'bg-indigo-600', icon: 'card' },
+                                        { title: 'Iuran Lunas', val: stats.iuranLunas, color: 'bg-green-600', icon: 'money' },
+                                    ].map((s, idx) => (
+                                        <div key={idx} className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                                            <div className="flex justify-between items-start">
+                                                <span className="text-xs text-slate-500 font-medium">{s.title}</span>
+                                                <div className={`${s.color} text-white p-1.5 rounded-lg`}>
+                                                    <Icon name={s.icon} className="w-3.5 h-3.5" />
+                                                </div>
+                                            </div>
+                                            <div className="mt-2 text-xl font-bold text-slate-800">{s.val}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Distribution by School */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                                        <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-3">
+                                            <Icon name="school" className="text-red-700" />
+                                            <span>Sebaran Anggota Per Sekolah (3 Sekolah)</span>
+                                        </h3>
+                                        <div className="space-y-3">
+                                            {SCHOOLS.map((sc, i) => {
+                                                const count = members.filter(m => m.sekolah === sc).length;
+                                                const pct = stats.total ? Math.round((count / stats.total) * 100) : 0;
+                                                return (
+                                                    <div key={i} className="space-y-1">
+                                                        <div className="flex justify-between text-xs font-medium text-slate-700">
+                                                            <span>{sc}</span>
+                                                            <span>{count} Guru ({pct}%)</span>
+                                                        </div>
+                                                        <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                                            <div className="bg-red-600 h-2.5 rounded-full" style={{ width: `${pct}%` }}></div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Distribution by Employment Type */}
+                                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                                        <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-3">
+                                            <Icon name="users" className="text-red-700" />
+                                            <span>Komposisi Status Kepegawaian</span>
+                                        </h3>
+                                        <div className="space-y-3">
+                                            {PEGAWAI_TYPES.map((st, i) => {
+                                                const count = members.filter(m => m.statusPegawai === st).length;
+                                                const pct = stats.total ? Math.round((count / stats.total) * 100) : 0;
+                                                const colors = ['bg-emerald-500', 'bg-teal-500', 'bg-purple-500', 'bg-amber-500', 'bg-orange-500', 'bg-slate-500'];
+                                                return (
+                                                    <div key={i} className="space-y-1">
+                                                        <div className="flex justify-between text-xs font-medium text-slate-700">
+                                                            <span>{st}</span>
+                                                            <span>{count} Guru ({pct}%)</span>
+                                                        </div>
+                                                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                                            <div className={`${colors[i % colors.length]} h-2 rounded-full`} style={{ width: `${pct}%` }}></div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 2: DATA ANGGOTA */}
+                        {activeTab === 'data' && (
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-4 p-5">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-slate-800">Daftar Anggota PGRI Kec. Tobu</h2>
+                                        <p className="text-xs text-slate-500">Menampilkan {filteredMembers.length} dari total {members.length} guru</p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setSearchTerm(''); setFilterSchool(''); setFilterStatus(''); setFilterKta('');
+                                        }}
+                                        className="text-xs text-red-700 hover:underline flex items-center gap-1"
+                                    >
+                                        <Icon name="refresh" className="w-3.5 h-3.5" /> Reset Filter
+                                    </button>
+                                </div>
+
+                                {/* Filters */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Cari Nama / NIK / NPA..."
+                                            value={searchTerm}
+                                            onChange={e => setSearchTerm(e.target.value)}
+                                            className="w-full pl-8 pr-3 py-1.5 text-xs border rounded-md border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500"
+                                        />
+                                        <div className="absolute left-2.5 top-2 text-slate-400">
+                                            <Icon name="search" className="w-3.5 h-3.5" />
+                                        </div>
+                                    </div>
+
+                                    <select
+                                        value={filterSchool}
+                                        onChange={e => setFilterSchool(e.target.value)}
+                                        className="w-full py-1.5 px-2 text-xs border rounded-md border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500"
+                                    >
+                                        <option value="">-- Semua Sekolah --</option>
+                                        {SCHOOLS.map((s, idx) => <option key={idx} value={s}>{s}</option>)}
+                                    </select>
+
+                                    <select
+                                        value={filterStatus}
+                                        onChange={e => setFilterStatus(e.target.value)}
+                                        className="w-full py-1.5 px-2 text-xs border rounded-md border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500"
+                                    >
+                                        <option value="">-- Semua Status Pegawai --</option>
+                                        {PEGAWAI_TYPES.map((st, idx) => <option key={idx} value={st}>{st}</option>)}
+                                    </select>
+
+                                    <select
+                                        value={filterKta}
+                                        onChange={e => setFilterKta(e.target.value)}
+                                        className="w-full py-1.5 px-2 text-xs border rounded-md border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500"
+                                    >
+                                        <option value="">-- Semua Status KTA --</option>
+                                        <option value="Aktif">Aktif</option>
+                                        <option value="Proses Verifikasi">Proses Verifikasi</option>
+                                        <option value="Belum Terbit">Belum Terbit</option>
+                                    </select>
+                                </div>
+
+                                {/* Table */}
+                                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                                    <table className="w-full text-left text-xs text-slate-700">
+                                        <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
+                                            <tr>
+                                                <th className="p-3">NPA / NIK</th>
+                                                <th className="p-3">Nama Anggota</th>
+                                                <th className="p-3">Unit Kerja</th>
+                                                <th className="p-3">Status Pegawai</th>
+                                                <th className="p-3">KTA Status</th>
+                                                <th className="p-3 text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200">
+                                            {filteredMembers.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="6" className="p-8 text-center text-slate-400">
+                                                        Data anggota tidak ditemukan.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                filteredMembers.map((m) => (
+                                                    <tr key={m.id} className="hover:bg-slate-50">
+                                                        <td className="p-3 font-mono">
+                                                            <div className="font-semibold text-slate-800">{m.npa}</div>
+                                                            <div className="text-[10px] text-slate-400">{m.nik}</div>
+                                                        </td>
+                                                        <td className="p-3 font-medium text-slate-900">
+                                                            {m.nama}
+                                                            <div className="text-[10px] text-slate-500">Desa {m.desa} • {m.noWa}</div>
+                                                        </td>
+                                                        <td className="p-3">{m.sekolah}</td>
+                                                        <td className="p-3">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                                                m.statusPegawai === 'PNS' ? 'bg-emerald-100 text-emerald-800' :
+                                                                m.statusPegawai.includes('PPPK') ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'
+                                                            }`}>
+                                                                {m.statusPegawai}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                                                m.statusKta === 'Aktif' ? 'bg-green-100 text-green-800' :
+                                                                m.statusKta === 'Proses Verifikasi' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+                                                            }`}>
+                                                                {m.statusKta}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <div className="flex justify-center items-center gap-1">
+                                                                <button
+                                                                    onClick={() => { setSelectedMemberForKta(m); setActiveTab('kta'); }}
+                                                                    title="Lihat KTA Digital"
+                                                                    className="p-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded"
+                                                                >
+                                                                    <Icon name="card" className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteMember(m.id)}
+                                                                    title="Hapus Data"
+                                                                    className="p-1.5 bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-700 rounded"
+                                                                >
+                                                                    <Icon name="trash" className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 3: PENDAFTARAN ANGGOTA */}
+                        {activeTab === 'register' && (
+                            <div className="max-w-2xl mx-auto bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-5">
+                                <div className="border-b pb-3">
+                                    <h2 className="text-lg font-bold text-slate-800">Form Pendaftaran Anggota Baru PGRI</h2>
+                                    <p className="text-xs text-slate-500">Cabang Khusus Kecamatan Tobu - Kab. Timor Tengah Selatan</p>
+                                </div>
+
+                                {formMsg.text && (
+                                    <div className={`p-3 rounded-lg text-xs font-medium ${
+                                        formMsg.type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                    }`}>
+                                        {formMsg.text}
+                                    </div>
+                                )}
+
+                                <form onSubmit={handleAddMember} className="space-y-4 text-xs">
+                                    <div>
+                                        <label className="block font-medium text-slate-700 mb-1">Nama Lengkap (beserta Gelar) *</label>
+                                        <input
+                                            type="text" required placeholder="Contoh: Markus Bano, S.Pd."
+                                            value={formData.nama} onChange={e => setFormData({ ...formData, nama: e.target.value })}
+                                            className="w-full p-2 border rounded-md border-slate-300 focus:ring-1 focus:ring-red-500"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block font-medium text-slate-700 mb-1">NIK (16 Digit) *</label>
+                                            <input
+                                                type="text" required maxLength="16" placeholder="530211..."
+                                                value={formData.nik} onChange={e => setFormData({ ...formData, nik: e.target.value.replace(/\D/g, '') })}
+                                                className="w-full p-2 border rounded-md border-slate-300 focus:ring-1 focus:ring-red-500 font-mono"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block font-medium text-slate-700 mb-1">Nomor WhatsApp *</label>
+                                            <input
+                                                type="text" required placeholder="08123456789"
+                                                value={formData.noWa} onChange={e => setFormData({ ...formData, noWa: e.target.value })}
+                                                className="w-full p-2 border rounded-md border-slate-300 focus:ring-1 focus:ring-red-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block font-medium text-slate-700 mb-1">Unit Kerja / Sekolah *</label>
+                                            <select
+                                                value={formData.sekolah} onChange={e => setFormData({ ...formData, sekolah: e.target.value })}
+                                                className="w-full p-2 border rounded-md border-slate-300 focus:ring-1 focus:ring-red-500"
+                                            >
+                                                {SCHOOLS.map((s, i) => <option key={i} value={s}>{s}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block font-medium text-slate-700 mb-1">Desa Domisili *</label>
+                                            <select
+                                                value={formData.desa} onChange={e => setFormData({ ...formData, desa: e.target.value })}
+                                                className="w-full p-2 border rounded-md border-slate-300 focus:ring-1 focus:ring-red-500"
+                                            >
+                                                {VILLAGES.map((v, i) => <option key={i} value={v}>Desa {v}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block font-medium text-slate-700 mb-1">Status Kepegawaian *</label>
+                                            <select
+                                                value={formData.statusPegawai} onChange={e => setFormData({ ...formData, statusPegawai: e.target.value })}
+                                                className="w-full p-2 border rounded-md border-slate-300 focus:ring-1 focus:ring-red-500"
+                                            >
+                                                {PEGAWAI_TYPES.map((st, i) => <option key={i} value={st}>{st}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block font-medium text-slate-700 mb-1">Mata Pelajaran / Tugas</label>
+                                            <input
+                                                type="text" placeholder="Contoh: Matematika / Guru Kelas"
+                                                value={formData.mataPelajaran} onChange={e => setFormData({ ...formData, mataPelajaran: e.target.value })}
+                                                className="w-full p-2 border rounded-md border-slate-300 focus:ring-1 focus:ring-red-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        className="w-full py-2.5 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg shadow transition flex justify-center items-center gap-2"
+                                    >
+                                        <Icon name="userPlus" className="w-4 h-4" />
+                                        <span>Daftarkan Anggota Baru</span>
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+
+                        {/* TAB 4: CETAK KTA DIGITAL */}
+                        {activeTab === 'kta' && (
+                            <div className="space-y-6">
+                                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4 no-print">
+                                    <div className="w-full sm:w-auto">
+                                        <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Anggota untuk Preview KTA:</label>
+                                        <select
+                                            value={selectedMemberForKta?.id || ''}
+                                            onChange={e => {
+                                                const m = members.find(mem => mem.id === e.target.value);
+                                                setSelectedMemberForKta(m || null);
+                                            }}
+                                            className="w-full sm:w-80 p-2 text-xs border border-slate-300 rounded-md"
+                                        >
+                                            <option value="">-- Pilih Anggota --</option>
+                                            {members.map(m => <option key={m.id} value={m.id}>{m.nama} - {m.sekolah}</option>)}
+                                        </select>
+                                    </div>
+                                    {selectedMemberForKta && (
+                                        <button
+                                            onClick={() => window.print()}
+                                            className="w-full sm:w-auto px-4 py-2 bg-red-700 text-white rounded-lg text-xs font-bold shadow hover:bg-red-800 flex items-center justify-center gap-2"
+                                        >
+                                            <Icon name="print" className="w-4 h-4" />
+                                            <span>Cetak KTA (PDF / Printer)</span>
+                                        </button>
+                                    )}
+                                </div>
+
+                                {selectedMemberForKta ? (
+                                    <div id="printable-kta" className="flex justify-center p-4">
+                                        {/* KTA Card Standard ID-1 Size */}
+                                        <div className="w-[380px] h-[240px] bg-gradient-to-br from-red-800 via-red-700 to-red-900 rounded-2xl shadow-xl text-white p-4 relative overflow-hidden border-2 border-amber-400/50 flex flex-col justify-between">
+                                            {/* Background Watermark */}
+                                            <div className="absolute -right-10 -bottom-10 opacity-10 text-[100px] font-black select-none pointer-events-none">
+                                                PGRI
+                                            </div>
+
+                                            {/* Header KTA */}
+                                            <div className="flex items-center gap-3 border-b border-white/20 pb-2 z-10">
+                                                <div className="bg-white text-red-800 p-1.5 rounded-full font-extrabold text-xs shadow">PGRI</div>
+                                                <div>
+                                                    <div className="text-[11px] font-bold tracking-wider leading-none">PERSATUAN GURU REPUBLIK INDONESIA</div>
+                                                    <div className="text-[9px] text-amber-200">KTA DIGITAL • CABANG KHUSUS TOBU</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Body KTA */}
+                                            <div className="grid grid-cols-3 gap-2 my-auto z-10">
+                                                <div className="col-span-1 flex flex-col items-center justify-center">
+                                                    <div className="w-16 h-20 bg-slate-200 rounded border border-white/40 flex items-center justify-center text-slate-400 text-[9px] text-center font-semibold">
+                                                        FOTO 2x3
+                                                    </div>
+                                                </div>
+                                                <div className="col-span-2 text-[10px] space-y-1">
+                                                    <div>
+                                                        <span className="text-[8px] text-red-200 block uppercase">NPA PGRI</span>
+                                                        <span className="font-mono font-bold text-amber-300 text-xs">{selectedMemberForKta.npa}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[8px] text-red-200 block uppercase">Nama Lengkap</span>
+                                                        <span className="font-bold text-white line-clamp-1">{selectedMemberForKta.nama}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[8px] text-red-200 block uppercase">Unit Kerja</span>
+                                                        <span className="text-slate-100 line-clamp-1">{selectedMemberForKta.sekolah}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Footer KTA */}
+                                            <div className="flex justify-between items-end border-t border-white/20 pt-1 text-[8px] z-10">
+                                                <div>
+                                                    <div className="text-slate-200">Kec. Tobu, Kab. TTS - NTT</div>
+                                                    <div className="text-amber-300 font-semibold">Status: {selectedMemberForKta.statusPegawai}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="font-bold text-white">Pengurus Cabang</div>
+                                                    <div className="text-[7px] text-slate-300">Terverifikasi Digital</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300 text-slate-400 text-xs">
+                                        Pilih salah satu anggota pada menu drop-down di atas untuk melihat tampilan KTA Digital.
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* TAB 5: KELOLA IURAN */}
+                        {activeTab === 'iuran' && (
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-800">Manajemen Iuran Keanggotaan</h2>
+                                    <p className="text-xs text-slate-500">Catatan pembayaran iuran bulanan guru PGRI Cabang Khusus Tobu</p>
+                                </div>
+
+                                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                                    <table className="w-full text-left text-xs text-slate-700">
+                                        <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
+                                            <tr>
+                                                <th className="p-3">Nama Anggota</th>
+                                                <th className="p-3">Sekolah</th>
+                                                <th className="p-3">Status Pegawai</th>
+                                                <th className="p-3">Status Pembayaran Iuran</th>
+                                                <th className="p-3 text-center">Ubah Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200">
+                                            {members.map(m => (
+                                                <tr key={m.id} className="hover:bg-slate-50">
+                                                    <td className="p-3 font-semibold text-slate-900">{m.nama}</td>
+                                                    <td className="p-3">{m.sekolah}</td>
+                                                    <td className="p-3">{m.statusPegawai}</td>
+                                                    <td className="p-3">
+                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                                            m.statusIuran === 'Lunas (Bulan Ini)' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {m.statusIuran}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 text-center">
+                                                        <select
+                                                            value={m.statusIuran}
+                                                            onChange={e => handleUpdateIuran(m.id, e.target.value)}
+                                                            className="p-1 border border-slate-300 rounded text-[11px]"
+                                                        >
+                                                            <option value="Lunas (Bulan Ini)">Lunas (Bulan Ini)</option>
+                                                            <option value="Tunggakan < 3 Bulan">Tunggakan &lt; 3 Bulan</option>
+                                                            <option value="Tunggakan > 3 Bulan">Tunggakan &gt; 3 Bulan</option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 6: EKSPOR / IMPOR */}
+                        {activeTab === 'export' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-3">
+                                        <Icon name="download" className="text-red-700" />
+                                        <span>Cadangkan Data (Ekspor JSON)</span>
+                                    </h3>
+                                    <p className="text-xs text-slate-600">
+                                        Unduh seluruh data anggota PGRI Kec. Tobu dalam format file `.json` untuk dikirimkan ke Pengurus PGRI Kabupaten Timor Tengah Selatan atau sebagai cadangan bulanan.
+                                    </p>
+                                    <button
+                                        onClick={handleExportJson}
+                                        className="px-4 py-2 bg-red-700 text-white rounded-lg text-xs font-bold shadow hover:bg-red-800 flex items-center gap-2"
+                                    >
+                                        <Icon name="download" className="w-4 h-4" />
+                                        <span>Unduh File Cadangan (JSON)</span>
+                                    </button>
+                                </div>
+
+                                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b pb-3">
+                                        <Icon name="upload" className="text-red-700" />
+                                        <span>Pulihkan Data (Impor JSON)</span>
+                                    </h3>
+                                    <p className="text-xs text-slate-600">
+                                        Unggah file `.json` cadangan untuk memulihkan data anggota di browser ini.
+                                    </p>
+                                    <input
+                                        type="file"
+                                        accept=".json"
+                                        onChange={handleImportJson}
+                                        className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                                    />
+                                </div>
+
+                                <div className="md:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
+                                    <div>
+                                        <div className="font-bold text-xs text-slate-800">Reset Sistem ke Data Awal</div>
+                                        <div className="text-[11px] text-slate-500">Kembalikan daftar anggota ke sampel bawaan PGRI Tobu.</div>
+                                    </div>
+                                    <button
+                                        onClick={handleResetData}
+                                        className="px-3 py-1.5 bg-slate-200 hover:bg-red-100 hover:text-red-700 text-slate-700 rounded text-xs font-semibold"
+                                    >
+                                        Reset Data
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="bg-slate-800 text-slate-400 text-xs py-4 text-center mt-auto no-print">
+                        <p>© 2026 PGRI Cabang Khusus Kecamatan Tobu - Kabupaten Timor Tengah Selatan, NTT</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
